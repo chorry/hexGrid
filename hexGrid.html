@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style type="text/css">
+        #canvas_container {
+
+            background: #696969;
+        }
+    </style>
+
+    <script type="text/javascript" src=" http://cdnjs.cloudflare.com/ajax/libs/raphael/2.1.0/raphael-min.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+    <script type="text/javascript">
+        var hexMap = {};
+        var hexSize = 20;
+        var hexH = hexSize*2;
+        var hexW = hexSize*2;
+        var hexSpacing = hexSize * 1;
+        var hexSpacingL = hexSize * .5;
+        var hexSpacingR = hexSpacingL;
+        var columnNumber = 3;
+        var rowNumber = 7;
+
+		var bgW = 520;
+        var bgH = 240;
+		var hexes = [];
+		var hexList = {};
+        var shiftW, shiftH;
+
+        var turnCount = 1;
+		var maxTurns  = 5;
+
+        function polygon(x, y, size, sides, rotate)
+        {
+            var self = this;
+
+            self.centrePoint = [x,y];
+            self.size = size;
+            self.sides = sides;
+            self.rotated = rotate;
+            self.sizeMultiplier = 1;
+
+            self.points = [];
+            self.pi = 3.14159265;
+            for (i = 0; i < sides; i++) {
+                self.points.push(
+                        [
+                            (x + (self.size * self.sizeMultiplier) * (rotate ? Math.sin(2 * self.pi * i / sides) : Math.cos(2 * self.pi * i / sides))),
+                            (y + (self.size * self.sizeMultiplier) * (rotate ? Math.cos(2 * self.pi * i / sides) : Math.sin(2 * self.pi * i / sides)))
+                        ]
+                );
+            }
+            self.svgString = 'M' + self.points.join(' ') + ' L Z';
+        }
+
+        function checkNeighbors(x, y)
+        {
+            console.log('Checking neigh ' + (y%2));
+			if ( y%2 == 0)
+			{
+            var neighbors = [
+                    [x, y-2],
+                    [x, y-1], [x,   y+1],
+                    [x, y+2], [x-1, y+1	],
+                    [x-1, y-1],
+            ];
+			}
+			else
+			{
+            var neighbors = [
+                    [x, y-2],
+                    [x, y-1], [x,   y+1],
+                    [x, y+2], [x+1, y-1	],
+                    [x+1, y+1],
+            ];			
+			}
+
+            return neighbors;
+        }
+
+		function paintNeighbors(self, x,y)
+		{
+			self.attr({"fill":"red"});
+			neigh = checkNeighbors(self.attrs.hexColumn, self.attrs.hexRow);
+
+			for ( i=0; i<neigh.length; i++ ) {
+				if (
+					typeof hexList[neigh[i][1]] == 'object' &&
+					typeof hexList[neigh[i][1]][neigh[i][0]] == 'object'
+					)
+				{
+					hexList[neigh[i][1]][neigh[i][0]].attr({"fill":"blue"});
+				}
+			}
+		}
+
+		function processClickOnCell(obj) {
+			neigh = checkNeighbors(obj.attrs.hexColumn, obj.attrs.hexRow);
+
+			for ( i=0; i<neigh.length; i++ ) {
+				if (
+					typeof hexList[neigh[i][1]] == 'object' &&
+					typeof hexList[neigh[i][1]][neigh[i][0]] == 'object'
+					)
+				{
+					incrementCellValue(hexList[neigh[i][1]][neigh[i][0]]);
+				}
+			}
+		}
+
+		function incrementCellValue(obj) {
+			if ( typeof obj.attrs.gameValue == 'undefined')
+			{
+				obj.attrs.gameValue = 1;
+			} 
+			else
+			{
+				obj.attrs.gameValue += 1;
+			}
+
+			if (obj.attrs.gameValue > 9)
+			{
+				obj.attrs.gameValue = 0;
+			}
+
+			obj.attrs.textElement.attr({text: obj.attrs.gameValue })			
+		}
+
+		function processTurnEvents() {
+            turnCount += 1;
+            console.debug('next turn '+ turnCount);
+            for (i =0; i<hexList.length; i++)
+            {
+            	for (q=0; q<hexList[i].length; q++)
+            	{
+
+            	}
+            } 
+		}
+		
+        $(document).ready(function() {
+
+			
+            var paper = Raphael(0, 0, bgW, bgH);
+
+			
+            var background = paper.add( paper.rect(0, 0, bgW, bgH).attr("fill","#ccc") );
+
+ 
+
+            for (var column = 0; column <= columnNumber; column++)
+            {
+                shiftW = shiftH = 0;
+
+                for (var row=0; row <= rowNumber; row++)
+                {
+
+                    localHexSpacingW = column * (hexSpacingL + hexSpacing + hexSpacingR ) + column*hexW;
+                    localHexSpacingH = row*hexH/2 + hexSpacingL;
+
+                    if (row == 0)
+                    {
+                        localHexSpacingH = hexSpacingL;
+                    }
+
+                    if (column == 0)
+                    {
+                        localHexSpacingW = 0;
+                    }
+
+                    if (row%2 ==1)
+                    {
+                        localHexSpacingW += hexSpacing*1.5 + hexSpacingL;
+                    }
+
+                    var hexX = hexSize + localHexSpacingW ;
+                    var hexY = hexSize + localHexSpacingH;
+                    var path = new polygon(
+                            hexX,         //X
+                            hexY,            //Y
+                            hexSize,
+                            6,
+                            false
+                    );
+
+                    var hex = paper.path(path.svgString).attr({"fill":"white", "stroke-width": 0, "fill-opacity": .4});
+                    hex.attrs['hexRow'] = row;
+                    hex.attrs['hexColumn'] = column;
+					if (typeof hexList[row] == 'undefined')
+					{
+						hexList[row] = {};
+					}
+					hexList[row][column] = hex; 
+                    paper.set(hex).click( function() {
+                    	processClickOnCell(this);
+						console.debug(hexList);
+						paintNeighbors(this, 1,2);
+                    });
+
+                    hexMap[hexX, hexY] = hex;
+
+                    var t = paper.text(
+                            hexX,
+                            hexY,
+                            column + ":" + row
+                    );
+                    hex.attrs.textElement = t;
+
+                }
+            }
+
+            //DRAW next turn
+            var nextTurnButton = paper.rect(350, 30, 60, 60).attr({fill: "#666", stroke: "#666"});
+            var	nextTurnText   = paper.text(380,60,"Next\nTurn").attr({ "font-size": 16, "font-family": "Arial, Helvetica, sans-serif" });;
+            	paper.set(nextTurnButton).click( function() {
+            		processTurnEvents();
+            		});
+
+        });
+    </script>
+</head>
+<body>
+
+</body>
+</html>
