@@ -27,8 +27,23 @@
 		var hexList = {};
         var shiftW, shiftH;
 
-        var turnCount = 1;
+        var turnCount = 0;
 		var maxTurns  = 5;
+
+		var cellTypes = {
+			'ice':{
+				color:'#7fc7ff'
+			},
+			'grass':{
+				color:'#204921'
+			},
+			'oil':{
+				color:'#000'
+			},
+			'sand':{
+				color:'#efd334'
+			}
+		}
 
         function polygon(x, y, size, sides, rotate)
         {
@@ -78,7 +93,7 @@
             return neighbors;
         }
 
-		function paintNeighbors(self, x,y)
+		function paintNeighbors(self)
 		{
 			self.attr({"fill":"red"});
 			neigh = checkNeighbors(self.attrs.hexColumn, self.attrs.hexRow);
@@ -95,17 +110,30 @@
 		}
 
 		function processClickOnCell(obj) {
-			neigh = checkNeighbors(obj.attrs.hexColumn, obj.attrs.hexRow);
+			console.debug(obj);
 
+			if (typeof activeElement == 'undefined') return;
+
+			if (activeElement in cellTypes)
+			{
+				console.log('paint with '+ cellTypes[activeElement]['color']);
+				obj.attr({fill:cellTypes[activeElement]['color']})
+
+			}
+			
+			
+			/* well, this would be nice for another type of puzzle, i guess :)
+			neigh = checkNeighbors(obj.attrs.hexColumn, obj.attrs.hexRow);
 			for ( i=0; i<neigh.length; i++ ) {
 				if (
 					typeof hexList[neigh[i][1]] == 'object' &&
 					typeof hexList[neigh[i][1]][neigh[i][0]] == 'object'
 					)
 				{
-					incrementCellValue(hexList[neigh[i][1]][neigh[i][0]]);
+					incrementCellValue(hexList[neigh[i][1]][neigh[i][0]]); 
 				}
 			}
+			*/
 		}
 
 		function incrementCellValue(obj) {
@@ -128,7 +156,13 @@
 
 		function processTurnEvents() {
             turnCount += 1;
-            console.debug('next turn '+ turnCount);
+            if (turnCount > maxTurns)
+            {
+            	alert('restart time!');
+            	return false;
+            }
+            turnCount_textObj.attr({text:"Turn #"+turnCount+"/"+maxTurns})
+
             for (i =0; i<hexList.length; i++)
             {
             	for (q=0; q<hexList[i].length; q++)
@@ -138,9 +172,22 @@
             } 
 		}
 		
+		function gameState() {
+
+		}
+
+		gameState.prototype.invalidate = function() {
+			//REDRAW EVERYTHING!
+			//update grid
+			//update text labels
+			hexTypeSelected_textObj.attr({text:"selected\n" + activeElement});
+			
+			//update something else?
+		}
+
         $(document).ready(function() {
 
-			
+			gameState = new gameState();
             var paper = Raphael(0, 0, bgW, bgH);
 
 			
@@ -193,8 +240,6 @@
 					hexList[row][column] = hex; 
                     paper.set(hex).click( function() {
                     	processClickOnCell(this);
-						console.debug(hexList);
-						paintNeighbors(this, 1,2);
                     });
 
                     hexMap[hexX, hexY] = hex;
@@ -215,6 +260,38 @@
             	paper.set(nextTurnButton).click( function() {
             		processTurnEvents();
             		});
+
+            //TODO: type selectors window should auto-fit to contained items
+            //TYPE SELECTORS
+            var hexTypeSelectors = paper.rect(350,100,150,90).attr({fill:"none", stroke:"#000"});
+                hexTypeSelected_textObj = paper.text(460,60,"no selection").attr({ "font-size": 16, "font-family": "Arial, Helvetica, sans-serif" });
+            	turnCount_textObj = paper.text(455,30,"Turn #0").attr({ "font-size": 16, "font-family": "Arial, Helvetica, sans-serif" });
+            //add some 
+            var hexTypeOne   = paper.rect(350,100,30,30).attr({fill:"#7fc7ff"});
+            	hexTypeOne.attrs.elemDesc = 'ice';
+            	paper.set(hexTypeOne).click(function(){
+            		activeElement = hexTypeOne.attrs.elemDesc;
+            		gameState.invalidate();
+            	});
+            var hexTypeTwo   = paper.rect(380,100,30,30).attr({fill:"#204921"});
+            	hexTypeTwo.attrs.elemDesc = 'grass';
+            	paper.set(hexTypeTwo).click(function(){
+            		activeElement = hexTypeTwo.attrs.elemDesc;
+            		gameState.invalidate();
+            	});
+            var hexTypeThree = paper.rect(410,100,30,30).attr({fill:"#efd334"});
+            	hexTypeThree.attrs.elemDesc = 'sand';
+            	paper.set(hexTypeThree).click(function(){
+            		activeElement = hexTypeThree.attrs.elemDesc;
+            		gameState.invalidate();
+            	});
+            var hexTypeFour  = paper.rect(440,100,30,30).attr({fill:"#000"});
+            	hexTypeFour.attrs.elemDesc = 'oil';
+            	paper.set(hexTypeFour).click(function(){
+            		activeElement = hexTypeFour.attrs.elemDesc;
+            		gameState.invalidate();
+            	});
+
 
         });
     </script>
